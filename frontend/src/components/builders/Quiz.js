@@ -1,0 +1,338 @@
+import React, { useState } from 'react';
+import jsPDF from 'jspdf';
+
+const Quiz = ({ decrementUses, setStep }) => {
+  const [formData, setFormData] = useState({
+    businessName: '',
+    niche: '',
+    quizTitle: '',
+    quizDescription: '',
+    questions: [
+      { question: '', options: ['', '', '', ''], correctAnswer: 0 }
+    ]
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleQuestionChange = (index, value) => {
+    const newQuestions = [...formData.questions];
+    newQuestions[index].question = value;
+    setFormData(prev => ({ ...prev, questions: newQuestions }));
+  };
+
+  const handleOptionChange = (qIndex, oIndex, value) => {
+    const newQuestions = [...formData.questions];
+    newQuestions[qIndex].options[oIndex] = value;
+    setFormData(prev => ({ ...prev, questions: newQuestions }));
+  };
+
+  const addQuestion = () => {
+    if (formData.questions.length < 10) {
+      setFormData(prev => ({
+        ...prev,
+        questions: [...prev.questions, { question: '', options: ['', '', '', ''], correctAnswer: 0 }]
+      }));
+    }
+  };
+
+  const removeQuestion = (index) => {
+    if (formData.questions.length > 1) {
+      const newQuestions = formData.questions.filter((_, i) => i !== index);
+      setFormData(prev => ({ ...prev, questions: newQuestions }));
+    }
+  };
+
+  const handleGenerate = () => {
+    if (!formData.businessName || !formData.niche || !formData.quizTitle) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    const hasEmptyQuestions = formData.questions.some(q => 
+      !q.question || q.options.some(opt => !opt)
+    );
+
+    if (hasEmptyQuestions) {
+      alert('Please fill in all questions and options');
+      return;
+    }
+
+    decrementUses();
+    generatePDF();
+  };
+
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(28);
+    doc.setTextColor(20, 184, 166);
+    doc.text(formData.quizTitle, 105, 40, { align: 'center' });
+    
+    doc.setFontSize(14);
+    doc.setTextColor(100, 100, 100);
+    doc.text(formData.businessName, 105, 55, { align: 'center' });
+    
+    doc.setFontSize(12);
+    const descLines = doc.splitTextToSize(formData.quizDescription || '', 170);
+    doc.text(descLines, 105, 70, { align: 'center' });
+
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 60);
+    doc.text('Instructions: Answer each question and check your score at the end.', 20, 100);
+
+    let yPos = 120;
+
+    formData.questions.forEach((q, index) => {
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont(undefined, 'bold');
+      const questionText = doc.splitTextToSize(`${index + 1}. ${q.question}`, 170);
+      doc.text(questionText, 20, yPos);
+      yPos += questionText.length * 6 + 5;
+
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(10);
+      q.options.forEach((opt, optIndex) => {
+        const optionLetter = String.fromCharCode(65 + optIndex);
+        doc.text(`   ${optionLetter}) ${opt}`, 25, yPos);
+        yPos += 6;
+      });
+
+      yPos += 10;
+    });
+
+    doc.addPage();
+    doc.setFontSize(18);
+    doc.setTextColor(20, 184, 166);
+    doc.text('Answer Key', 105, 30, { align: 'center' });
+
+    yPos = 50;
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 60);
+
+    formData.questions.forEach((q, index) => {
+      const answerLetter = String.fromCharCode(65 + q.correctAnswer);
+      doc.text(`${index + 1}. ${answerLetter}) ${q.options[q.correctAnswer]}`, 20, yPos);
+      yPos += 8;
+    });
+
+    yPos += 20;
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(undefined, 'bold');
+    doc.text('Scoring Guide:', 20, yPos);
+    yPos += 10;
+
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(10);
+    const totalQuestions = formData.questions.length;
+    const excellent = Math.ceil(totalQuestions * 0.8);
+    const good = Math.ceil(totalQuestions * 0.6);
+    const needsImprovement = Math.ceil(totalQuestions * 0.4);
+
+    doc.text(`${excellent}-${totalQuestions} correct: Excellent! You're on the right track.`, 20, yPos);
+    yPos += 7;
+    doc.text(`${good}-${excellent - 1} correct: Good! Room for improvement.`, 20, yPos);
+    yPos += 7;
+    doc.text(`${needsImprovement}-${good - 1} correct: Keep learning! We can help.`, 20, yPos);
+    yPos += 7;
+    doc.text(`Below ${needsImprovement}: Let's work together to improve your knowledge.`, 20, yPos);
+
+    yPos += 20;
+    doc.setFontSize(11);
+    doc.setTextColor(20, 184, 166);
+    doc.setFont(undefined, 'bold');
+    doc.text('Want to improve your score?', 20, yPos);
+    yPos += 8;
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 60);
+    doc.text('Contact us to learn how we can help you master this topic.', 20, yPos);
+
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text('Generated by BuildLead', 105, 280, { align: 'center' });
+
+    doc.save(`${formData.businessName.replace(/\s+/g, '-').toLowerCase()}-quiz.pdf`);
+    
+    alert('Quiz PDF Generated! Check your downloads folder.');
+    setStep('select');
+  };
+
+  const niches = [
+    'SaaS/Software', 'Coaching/Consulting', 'Ecommerce', 'Real Estate',
+    'Fitness/Health', 'Finance/Investing', 'Marketing Agency', 'Legal Services',
+    'Education/Training', 'Healthcare', 'B2B Services', 'Restaurant/Food',
+    'Beauty/Wellness', 'Construction', 'Automotive', 'Other'
+  ];
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="bg-white rounded-xl shadow-lg p-8">
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">Interactive Quiz Builder</h2>
+        <p className="text-gray-600 mb-8">Create engaging quizzes that qualify and educate leads</p>
+
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Business Name *
+            </label>
+            <input
+              type="text"
+              name="businessName"
+              value={formData.businessName}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              placeholder="e.g., Marketing Masters"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Niche/Industry *
+            </label>
+            <select
+              name="niche"
+              value={formData.niche}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              required
+            >
+              <option value="">Select your niche...</option>
+              {niches.map(niche => (
+                <option key={niche} value={niche}>{niche}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Quiz Title *
+            </label>
+            <input
+              type="text"
+              name="quizTitle"
+              value={formData.quizTitle}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              placeholder="e.g., How Ready Is Your Business for Digital Marketing?"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Quiz Description
+            </label>
+            <textarea
+              name="quizDescription"
+              value={formData.quizDescription}
+              onChange={handleChange}
+              rows="2"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              placeholder="Brief description of what this quiz covers..."
+            />
+          </div>
+
+          <div className="border-t pt-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Questions</h3>
+              <button
+                onClick={addQuestion}
+                disabled={formData.questions.length >= 10}
+                className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                + Add Question
+              </button>
+            </div>
+
+            {formData.questions.map((q, qIndex) => (
+              <div key={qIndex} className="bg-gray-50 rounded-lg p-6 mb-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="font-semibold text-gray-900">Question {qIndex + 1}</h4>
+                  {formData.questions.length > 1 && (
+                    <button
+                      onClick={() => removeQuestion(qIndex)}
+                      className="text-red-600 hover:text-red-800 text-sm"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Question Text *
+                    </label>
+                    <input
+                      type="text"
+                      value={q.question}
+                      onChange={(e) => handleQuestionChange(qIndex, e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      placeholder="Enter your question..."
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Answer Options *
+                    </label>
+                    {q.options.map((opt, oIndex) => (
+                      <div key={oIndex} className="flex items-center gap-2 mb-2">
+                        <span className="text-sm font-semibold text-gray-600 w-8">
+                          {String.fromCharCode(65 + oIndex)})
+                        </span>
+                        <input
+                          type="text"
+                          value={opt}
+                          onChange={(e) => handleOptionChange(qIndex, oIndex, e.target.value)}
+                          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          placeholder={`Option ${String.fromCharCode(65 + oIndex)}`}
+                          required
+                        />
+                        <input
+                          type="radio"
+                          name={`correct-${qIndex}`}
+                          checked={q.correctAnswer === oIndex}
+                          onChange={() => {
+                            const newQuestions = [...formData.questions];
+                            newQuestions[qIndex].correctAnswer = oIndex;
+                            setFormData(prev => ({ ...prev, questions: newQuestions }));
+                          }}
+                          className="w-5 h-5 text-teal-600"
+                        />
+                      </div>
+                    ))}
+                    <p className="text-xs text-gray-500 mt-2">
+                      Select the radio button for the correct answer
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={handleGenerate}
+            className="w-full bg-gradient-to-r from-teal-600 to-blue-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:from-teal-700 hover:to-blue-700 transition-all transform hover:scale-105 shadow-lg"
+          >
+            Generate Quiz PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Quiz;
