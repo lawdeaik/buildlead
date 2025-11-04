@@ -18,6 +18,11 @@ const Scorecard = ({ decrementUses, setStep }) => {
     ]
   });
 
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+
+  // 🔑 PUT YOUR GEMINI API KEY HERE
+  const GEMINI_API_KEY = 'AIzaSyDQnfqZ6_1Fmlx6bnFiXrNtjqd3i-QzDPA';
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -68,6 +73,95 @@ const Scorecard = ({ decrementUses, setStep }) => {
     if (newCategories[catIndex].metrics.length > 1) {
       newCategories[catIndex].metrics = newCategories[catIndex].metrics.filter((_, i) => i !== metIndex);
       setFormData(prev => ({ ...prev, categories: newCategories }));
+    }
+  };
+
+  const handleGenerateWithAI = async () => {
+    if (!formData.businessName || !formData.niche || !formData.scorecardTitle) {
+      alert('Please fill in Business Name, Niche, and Scorecard Title first');
+      return;
+    }
+
+    setIsGeneratingAI(true);
+
+    try {
+      const prompt = `You are an expert in Daniel Priestley's Key Person of Influence scorecard methodology.
+
+Create a business scorecard with 5-7 categories for:
+Business: ${formData.businessName}
+Niche: ${formData.niche}
+Focus: ${formData.scorecardTitle}
+
+Requirements:
+- Use Priestley's KPI and scorecard frameworks
+- Each category should have 3-5 specific metrics
+- Metrics should be measurable (scored 0-10)
+- Include category descriptions
+- Make it specific to ${formData.niche}
+
+Return ONLY a valid JSON array with this EXACT structure:
+[
+  {
+    "name": "Category Name",
+    "description": "What this category measures",
+    "metrics": [
+      {"metric": "Specific measurable metric", "maxScore": 10}
+    ]
+  }
+]
+
+No additional text or formatting.`;
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 2048,
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`API Error ${response.status}: ${JSON.stringify(errorData)}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+        const aiResponse = data.candidates[0].content.parts[0].text;
+        
+        const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const aiCategories = JSON.parse(jsonMatch[0]);
+          
+          setFormData(prev => ({
+            ...prev,
+            categories: aiCategories
+          }));
+
+          alert('✨ AI generated your scorecard! You can edit categories or generate PDF.');
+        } else {
+          throw new Error('Could not parse AI response');
+        }
+      } else {
+        throw new Error('Invalid AI response structure');
+      }
+      
+    } catch (error) {
+      console.error('AI Error:', error);
+      alert('AI generation failed: ' + error.message);
+    } finally {
+      setIsGeneratingAI(false);
     }
   };
 
@@ -355,13 +449,22 @@ const Scorecard = ({ decrementUses, setStep }) => {
           <div className="border-t pt-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold text-gray-900">Scorecard Categories</h3>
-              <button
-                onClick={addCategory}
-                disabled={formData.categories.length >= 7}
-                className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                + Add Category
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleGenerateWithAI}
+                  disabled={isGeneratingAI}
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {isGeneratingAI ? '✨ Generating...' : '✨ Generate with AI'}
+                </button>
+                <button
+                  onClick={addCategory}
+                  disabled={formData.categories.length >= 7}
+                  className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  + Add Category
+                </button>
+              </div>
             </div>
 
             {formData.categories.map((cat, catIndex) => (

@@ -13,6 +13,11 @@ const Checklist = ({ decrementUses, setStep }) => {
     ]
   });
 
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+
+  // 🔑 PUT YOUR GEMINI API KEY HERE
+  const GEMINI_API_KEY = 'AIzaSyDQnfqZ6_1Fmlx6bnFiXrNtjqd3i-QzDPA';
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -37,6 +42,93 @@ const Checklist = ({ decrementUses, setStep }) => {
     if (formData.items.length > 1) {
       const newItems = formData.items.filter((_, i) => i !== index);
       setFormData(prev => ({ ...prev, items: newItems }));
+    }
+  };
+
+  const handleGenerateWithAI = async () => {
+    if (!formData.businessName || !formData.niche || !formData.checklistTitle) {
+      alert('Please fill in Business Name, Niche, and Checklist Title first');
+      return;
+    }
+
+    setIsGeneratingAI(true);
+
+    try {
+      const prompt = `You are an expert in Alex Hormozi's actionable step-by-step frameworks.
+
+Create a 10-item action checklist for:
+Business: ${formData.businessName}
+Niche: ${formData.niche}
+Topic: ${formData.checklistTitle}
+Target Audience: ${formData.targetAudience || 'General audience'}
+
+Requirements:
+- Use Hormozi's step-by-step action frameworks
+- Each item should be specific and actionable
+- Include brief descriptions (1-2 sentences) explaining why each step matters
+- Order items logically from first to last step
+- Make it practical and immediately implementable
+
+Return ONLY a valid JSON array with this EXACT structure:
+[
+  {
+    "item": "Action item text",
+    "description": "Brief explanation of why this matters (1-2 sentences)"
+  }
+]
+
+No additional text or formatting.`;
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 2048,
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`API Error ${response.status}: ${JSON.stringify(errorData)}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+        const aiResponse = data.candidates[0].content.parts[0].text;
+        
+        const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const aiItems = JSON.parse(jsonMatch[0]);
+          
+          setFormData(prev => ({
+            ...prev,
+            items: aiItems
+          }));
+
+          alert('✨ AI generated your checklist! You can edit the items or generate PDF.');
+        } else {
+          throw new Error('Could not parse AI response');
+        }
+      } else {
+        throw new Error('Invalid AI response structure');
+      }
+      
+    } catch (error) {
+      console.error('AI Error:', error);
+      alert('AI generation failed: ' + error.message);
+    } finally {
+      setIsGeneratingAI(false);
     }
   };
 
@@ -242,13 +334,22 @@ const Checklist = ({ decrementUses, setStep }) => {
           <div className="border-t pt-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold text-gray-900">Checklist Items</h3>
-              <button
-                onClick={addItem}
-                disabled={formData.items.length >= 20}
-                className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                + Add Item
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleGenerateWithAI}
+                  disabled={isGeneratingAI}
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {isGeneratingAI ? '✨ Generating...' : '✨ Generate with AI'}
+                </button>
+                <button
+                  onClick={addItem}
+                  disabled={formData.items.length >= 20}
+                  className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  + Add Item
+                </button>
+              </div>
             </div>
 
             {formData.items.map((item, index) => (

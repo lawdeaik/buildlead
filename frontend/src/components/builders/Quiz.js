@@ -12,6 +12,11 @@ const Quiz = ({ decrementUses, setStep }) => {
     ]
   });
 
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+
+  // 🔑 PUT YOUR GEMINI API KEY HERE (replace YOUR_API_KEY_HERE)
+  const GEMINI_API_KEY = 'AIzaSyDQnfqZ6_1Fmlx6bnFiXrNtjqd3i-QzDPA';
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -42,6 +47,92 @@ const Quiz = ({ decrementUses, setStep }) => {
     if (formData.questions.length > 1) {
       const newQuestions = formData.questions.filter((_, i) => i !== index);
       setFormData(prev => ({ ...prev, questions: newQuestions }));
+    }
+  };
+
+  const handleGenerateWithAI = async () => {
+    if (!formData.businessName || !formData.niche || !formData.quizTitle) {
+      alert('Please fill in Business Name, Niche, and Quiz Title first');
+      return;
+    }
+
+    setIsGeneratingAI(true);
+
+    try {
+      const prompt = `You are an expert in Alex Hormozi's lead generation frameworks.
+
+Create a 10-question multiple choice quiz for:
+Business: ${formData.businessName}
+Niche: ${formData.niche}
+Topic: ${formData.quizTitle}
+
+Requirements:
+- Use Hormozi's principles of value and problem identification
+- Each question should qualify the lead and identify pain points
+- 4 answer options per question (A, B, C, D)
+- Make it engaging and specific to ${formData.niche}
+
+Return ONLY a valid JSON array with this EXACT structure:
+[
+  {
+    "question": "Question text here?",
+    "options": ["Option A", "Option B", "Option C", "Option D"],
+    "correctAnswer": 0
+  }
+]
+
+No additional text or formatting.`;
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 2048,
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`API Error ${response.status}: ${JSON.stringify(errorData)}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+        const aiResponse = data.candidates[0].content.parts[0].text;
+        
+        const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const aiQuestions = JSON.parse(jsonMatch[0]);
+          
+          setFormData(prev => ({
+            ...prev,
+            questions: aiQuestions
+          }));
+
+          alert('✨ AI generated your quiz! You can edit the questions or generate PDF.');
+        } else {
+          throw new Error('Could not parse AI response');
+        }
+      } else {
+        throw new Error('Invalid AI response structure');
+      }
+      
+    } catch (error) {
+      console.error('AI Error:', error);
+      alert('AI generation failed: ' + error.message);
+    } finally {
+      setIsGeneratingAI(false);
     }
   };
 
@@ -246,13 +337,22 @@ const Quiz = ({ decrementUses, setStep }) => {
           <div className="border-t pt-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold text-gray-900">Questions</h3>
-              <button
-                onClick={addQuestion}
-                disabled={formData.questions.length >= 10}
-                className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                + Add Question
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleGenerateWithAI}
+                  disabled={isGeneratingAI}
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {isGeneratingAI ? '✨ Generating...' : '✨ Generate with AI'}
+                </button>
+                <button
+                  onClick={addQuestion}
+                  disabled={formData.questions.length >= 10}
+                  className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  + Add Question
+                </button>
+              </div>
             </div>
 
             {formData.questions.map((q, qIndex) => (
