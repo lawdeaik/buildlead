@@ -16,7 +16,7 @@ const Checklist = ({ decrementUses, setStep }) => {
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   // 🔑 PUT YOUR GEMINI API KEY HERE
-  const GEMINI_API_KEY = 'AIzaSyDQnfqZ6_1Fmlx6bnFiXrNtjqd3i-QzDPA';
+  const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
