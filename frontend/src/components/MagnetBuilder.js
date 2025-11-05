@@ -32,21 +32,21 @@ const MagnetBuilder = ({ decrementUses, usesRemaining, isPaid, userEmail, saveEm
       id: 'quiz',
       name: 'Interactive Quiz',
       icon: '✅',
-      description: 'Engage and qualify leads with personalized assessments',
+      description: 'Qualifying quiz with one question at a time. Downloads as HTML.',
       component: Quiz
     },
     {
       id: 'checklist',
       name: 'Action Checklist',
       icon: '📋',
-      description: 'Simple, actionable steps that provide immediate value',
+      description: 'Step-by-step actionable checklists using Hormozi frameworks',
       component: Checklist
     },
     {
       id: 'scorecard',
       name: 'Business Scorecard',
       icon: '📊',
-      description: "Priestley's scorecard methodology for benchmarking",
+      description: "Interactive sliders with instant scoring. Priestley's KPI methodology.",
       component: Scorecard
     },
     {
@@ -149,9 +149,18 @@ const MagnetBuilder = ({ decrementUses, usesRemaining, isPaid, userEmail, saveEm
                 <button
                   key={type.id}
                   onClick={() => handleSelectType(type)}
-                  className="bg-white rounded-xl p-8 shadow-lg hover:shadow-2xl transition-all transform hover:scale-105 text-left"
+                  className="bg-white rounded-xl p-8 shadow-lg hover:shadow-2xl transition-all transform hover:scale-105 text-left border-2 border-transparent hover:border-teal-500"
                 >
-                  <div className="text-5xl mb-4">{type.icon}</div>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="text-5xl">{type.icon}</div>
+                    <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
+                      type.id === 'quiz' || type.id === 'scorecard' 
+                        ? 'bg-purple-100 text-purple-700' 
+                        : 'bg-blue-100 text-blue-700'
+                    }`}>
+                      {type.id === 'quiz' || type.id === 'scorecard' ? 'Interactive' : 'PDF'}
+                    </span>
+                  </div>
                   <h3 className="text-xl font-bold text-gray-900 mb-2">
                     {type.name}
                   </h3>
@@ -160,6 +169,15 @@ const MagnetBuilder = ({ decrementUses, usesRemaining, isPaid, userEmail, saveEm
                   </p>
                 </button>
               ))}
+              
+              {/* AI Callout Card */}
+              <div className="bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl p-8 shadow-lg text-white">
+                <div className="text-5xl mb-4">✨</div>
+                <h3 className="text-xl font-bold mb-2">AI-Powered</h3>
+                <p className="text-blue-100 text-sm">
+                  All builders include AI generation using Hormozi & Priestley frameworks
+                </p>
+              </div>
             </div>
           </div>
         )}

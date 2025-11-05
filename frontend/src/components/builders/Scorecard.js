@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import jsPDF from 'jspdf';
 
 const Scorecard = ({ decrementUses, setStep }) => {
   const [formData, setFormData] = useState({
@@ -12,7 +11,7 @@ const Scorecard = ({ decrementUses, setStep }) => {
         name: '', 
         description: '',
         metrics: [
-          { metric: '', maxScore: 10 }
+          { metric: '' }
         ]
       }
     ]
@@ -34,9 +33,9 @@ const Scorecard = ({ decrementUses, setStep }) => {
     setFormData(prev => ({ ...prev, categories: newCategories }));
   };
 
-  const handleMetricChange = (catIndex, metIndex, field, value) => {
+  const handleMetricChange = (catIndex, metIndex, value) => {
     const newCategories = [...formData.categories];
-    newCategories[catIndex].metrics[metIndex][field] = value;
+    newCategories[catIndex].metrics[metIndex].metric = value;
     setFormData(prev => ({ ...prev, categories: newCategories }));
   };
 
@@ -47,7 +46,7 @@ const Scorecard = ({ decrementUses, setStep }) => {
         categories: [...prev.categories, { 
           name: '', 
           description: '',
-          metrics: [{ metric: '', maxScore: 10 }]
+          metrics: [{ metric: '' }]
         }]
       }));
     }
@@ -62,8 +61,8 @@ const Scorecard = ({ decrementUses, setStep }) => {
 
   const addMetric = (catIndex) => {
     const newCategories = [...formData.categories];
-    if (newCategories[catIndex].metrics.length < 5) {
-      newCategories[catIndex].metrics.push({ metric: '', maxScore: 10 });
+    if (newCategories[catIndex].metrics.length < 10) {
+      newCategories[catIndex].metrics.push({ metric: '' });
       setFormData(prev => ({ ...prev, categories: newCategories }));
     }
   };
@@ -87,16 +86,17 @@ const Scorecard = ({ decrementUses, setStep }) => {
     try {
       const prompt = `You are an expert in Daniel Priestley's Key Person of Influence scorecard methodology.
 
-Create a business scorecard with 5-7 categories for:
+Create a business scorecard for:
 Business: ${formData.businessName}
 Niche: ${formData.niche}
 Focus: ${formData.scorecardTitle}
 
 Requirements:
-- Use Priestley's KPI and scorecard frameworks
+- Create 5-7 categories based on Priestley's KPI framework
 - Each category should have 3-5 specific metrics
-- Metrics should be measurable (scored 0-10)
-- Include category descriptions
+- Metrics should be measurable (rated 0-10)
+- Use categories like: Pitch, Publish, Product, Profile, Partnership
+- Or use: Clarity, Credibility, Scalability, Visibility, Connectivity
 - Make it specific to ${formData.niche}
 
 Return ONLY a valid JSON array with this EXACT structure:
@@ -105,7 +105,7 @@ Return ONLY a valid JSON array with this EXACT structure:
     "name": "Category Name",
     "description": "What this category measures",
     "metrics": [
-      {"metric": "Specific measurable metric", "maxScore": 10}
+      {"metric": "Specific measurable metric"}
     ]
   }
 ]
@@ -149,7 +149,7 @@ No additional text or formatting.`;
             categories: aiCategories
           }));
 
-          alert('✨ AI generated your scorecard! You can edit categories or generate PDF.');
+          alert('✨ AI generated your scorecard! You can edit categories or generate HTML.');
         } else {
           throw new Error('Could not parse AI response');
         }
@@ -181,187 +181,410 @@ No additional text or formatting.`;
     }
 
     decrementUses();
-    generatePDF();
+    generateHTML();
   };
 
-  const generatePDF = () => {
-    const doc = new jsPDF();
-    
-    // Title Page
-    doc.setFontSize(26);
-    doc.setTextColor(20, 184, 166);
-    doc.text(formData.scorecardTitle, 105, 40, { align: 'center' });
-    
-    doc.setFontSize(14);
-    doc.setTextColor(100, 100, 100);
-    doc.text(formData.businessName, 105, 55, { align: 'center' });
-    
-    if (formData.scorecardDescription) {
-      doc.setFontSize(10);
-      const descLines = doc.splitTextToSize(formData.scorecardDescription, 170);
-      doc.text(descLines, 105, 70, { align: 'center' });
-    }
+  const generateHTML = () => {
+    const totalMetrics = formData.categories.reduce((sum, cat) => sum + cat.metrics.length, 0);
+    const maxScore = totalMetrics * 10;
 
-    // Priestley Framework Note
-    doc.setFontSize(9);
-    doc.setTextColor(60, 60, 60);
-    doc.text('Based on Daniel Priestley\'s Key Person of Influence Scorecard Methodology', 105, 90, { align: 'center' });
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${formData.scorecardTitle} - ${formData.businessName}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #14b8a6 0%, #0891b2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            color: #14b8a6;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+        .intro {
+            background: #f0fdfa;
+            border-left: 4px solid #14b8a6;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+        }
+        .intro p {
+            color: #0f766e;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .category {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        .category-header {
+            margin-bottom: 15px;
+        }
+        .category-name {
+            font-size: 22px;
+            font-weight: bold;
+            color: #0f172a;
+            margin-bottom: 5px;
+        }
+        .category-description {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 15px;
+        }
+        .category-score {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid #e2e8f0;
+        }
+        .category-score-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #475569;
+        }
+        .category-score-bar {
+            flex: 1;
+            height: 24px;
+            background: #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+        .category-score-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #14b8a6 0%, #0891b2 100%);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .category-score-text {
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .metric {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+        }
+        .metric-label {
+            flex: 1;
+            font-size: 14px;
+            color: #334155;
+        }
+        .metric-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .slider {
+            width: 200px;
+            height: 6px;
+            border-radius: 3px;
+            background: #e2e8f0;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #14b8a6;
+            cursor: pointer;
+        }
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #14b8a6;
+            cursor: pointer;
+            border: none;
+        }
+        .slider-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #14b8a6;
+            min-width: 30px;
+            text-align: right;
+        }
+        .results {
+            display: none;
+            background: linear-gradient(135deg, #14b8a6 0%, #0891b2 100%);
+            border-radius: 16px;
+            padding: 40px;
+            margin-top: 30px;
+            text-align: center;
+            color: white;
+        }
+        .results.show {
+            display: block;
+            animation: slideIn 0.5s ease;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .total-score {
+            font-size: 64px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .total-score-label {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+        .score-interpretation {
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .interpretation-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .interpretation-text {
+            font-size: 16px;
+            line-height: 1.6;
+            opacity: 0.95;
+        }
+        .btn {
+            background: white;
+            color: #14b8a6;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 30px;
+            transition: transform 0.2s ease;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>${formData.scorecardTitle}</h1>
+            <p>${formData.businessName}${formData.scorecardDescription ? ' • ' + formData.scorecardDescription : ''}</p>
+        </div>
 
-    // Instructions
-    doc.setFontSize(10);
-    doc.text('Instructions: Rate yourself 0-10 for each metric. Be honest for accurate results.', 20, 110);
+        <div class="intro">
+            <p><strong>Instructions:</strong> Rate yourself honestly on each metric from 0-10. Your scores will help identify your strengths and areas for improvement.</p>
+        </div>
 
-    let yPos = 130;
-    let totalMaxScore = 0;
+        <div id="categories">
+            ${formData.categories.map((cat, catIndex) => `
+            <div class="category" data-category="${catIndex}">
+                <div class="category-header">
+                    <div class="category-name">${cat.name}</div>
+                    ${cat.description ? `<div class="category-description">${cat.description}</div>` : ''}
+                </div>
+                
+                ${cat.metrics.map((metric, metIndex) => `
+                <div class="metric">
+                    <div class="metric-label">${metric.metric}</div>
+                    <div class="metric-input">
+                        <input 
+                            type="range" 
+                            min="0" 
+                            max="10" 
+                            value="5" 
+                            class="slider" 
+                            data-category="${catIndex}"
+                            data-metric="${metIndex}"
+                        >
+                        <span class="slider-value">5</span>
+                    </div>
+                </div>
+                `).join('')}
+                
+                <div class="category-score">
+                    <span class="category-score-label">Category Score:</span>
+                    <div class="category-score-bar">
+                        <div class="category-score-fill" style="width: 50%">
+                            <span class="category-score-text">0/${cat.metrics.length * 10}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            `).join('')}
+        </div>
 
-    // Categories and Metrics
-    formData.categories.forEach((cat, catIndex) => {
-      if (yPos > 240) {
-        doc.addPage();
-        yPos = 30;
-      }
+        <button class="btn" id="calculateBtn">Calculate My Score</button>
 
-      // Category Name
-      doc.setFontSize(14);
-      doc.setTextColor(20, 184, 166);
-      doc.setFont(undefined, 'bold');
-      doc.text(`${catIndex + 1}. ${cat.name}`, 20, yPos);
-      yPos += 8;
+        <div class="results" id="results">
+            <div class="total-score" id="totalScore">0</div>
+            <div class="total-score-label">out of ${maxScore} points</div>
+            <div class="score-interpretation">
+                <div class="interpretation-title" id="interpretationTitle"></div>
+                <div class="interpretation-text" id="interpretationText"></div>
+            </div>
+        </div>
 
-      // Category Description
-      if (cat.description) {
-        doc.setFontSize(9);
-        doc.setTextColor(100, 100, 100);
-        doc.setFont(undefined, 'normal');
-        const catDescLines = doc.splitTextToSize(cat.description, 170);
-        doc.text(catDescLines, 20, yPos);
-        yPos += catDescLines.length * 5 + 5;
-      }
+        <div class="footer">
+            Powered by ${formData.businessName} • Based on Daniel Priestley's KPI Methodology
+        </div>
+    </div>
 
-      // Metrics
-      cat.metrics.forEach((metric, metIndex) => {
-        if (yPos > 260) {
-          doc.addPage();
-          yPos = 30;
+    <script>
+        const scorecardData = ${JSON.stringify(formData)};
+        const scores = {};
+
+        // Initialize scores
+        scorecardData.categories.forEach((cat, catIndex) => {
+            scores[catIndex] = {};
+            cat.metrics.forEach((metric, metIndex) => {
+                scores[catIndex][metIndex] = 5;
+            });
+        });
+
+        // Handle slider changes
+        document.querySelectorAll('.slider').forEach(slider => {
+            slider.addEventListener('input', function() {
+                const catIndex = parseInt(this.dataset.category);
+                const metIndex = parseInt(this.dataset.metric);
+                const value = parseInt(this.value);
+                
+                // Update displayed value
+                this.nextElementSibling.textContent = value;
+                
+                // Update score
+                scores[catIndex][metIndex] = value;
+                
+                // Update category score
+                updateCategoryScore(catIndex);
+            });
+        });
+
+        function updateCategoryScore(catIndex) {
+            const category = scorecardData.categories[catIndex];
+            const categoryScores = scores[catIndex];
+            const totalScore = Object.values(categoryScores).reduce((sum, val) => sum + val, 0);
+            const maxScore = category.metrics.length * 10;
+            const percentage = (totalScore / maxScore) * 100;
+            
+            const categoryElement = document.querySelector(\`.category[data-category="\${catIndex}"]\`);
+            const scoreFill = categoryElement.querySelector('.category-score-fill');
+            const scoreText = categoryElement.querySelector('.category-score-text');
+            
+            scoreFill.style.width = percentage + '%';
+            scoreText.textContent = \`\${totalScore}/\${maxScore}\`;
         }
 
-        doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-        doc.setFont(undefined, 'normal');
-        
-        const metricText = doc.splitTextToSize(`   • ${metric.metric}`, 140);
-        doc.text(metricText, 23, yPos);
-        
-        // Score box
-        doc.setLineWidth(0.3);
-        doc.rect(165, yPos - 4, 25, 6);
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text(`/10`, 192, yPos);
-        
-        yPos += metricText.length * 5 + 3;
-        totalMaxScore += parseInt(metric.maxScore);
-      });
+        // Calculate total score
+        document.getElementById('calculateBtn').addEventListener('click', function() {
+            let totalScore = 0;
+            let maxPossible = ${maxScore};
+            
+            Object.values(scores).forEach(categoryScores => {
+                totalScore += Object.values(categoryScores).reduce((sum, val) => sum + val, 0);
+            });
+            
+            const percentage = (totalScore / maxPossible) * 100;
+            
+            // Determine interpretation
+            let title, text;
+            if (percentage >= 80) {
+                title = "Excellent!";
+                text = "You're performing at a high level. Focus on optimization and scaling your strengths.";
+            } else if (percentage >= 60) {
+                title = "Good Progress";
+                text = "Solid foundation. Identify your weakest areas for targeted improvement.";
+            } else if (percentage >= 40) {
+                title = "Developing";
+                text = "Room for growth. Focus on foundational improvements in your lowest-scoring categories.";
+            } else {
+                title = "Needs Attention";
+                text = "Significant opportunity for improvement. Let's work together to elevate your performance.";
+            }
+            
+            document.getElementById('totalScore').textContent = totalScore;
+            document.getElementById('interpretationTitle').textContent = title;
+            document.getElementById('interpretationText').textContent = text;
+            document.getElementById('results').classList.add('show');
+            
+            // Scroll to results
+            document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
 
-      yPos += 10;
-    });
+        // Initialize category scores
+        scorecardData.categories.forEach((cat, catIndex) => {
+            updateCategoryScore(catIndex);
+        });
+    </script>
+</body>
+</html>`;
 
-    // Scoring Guide - New Page
-    doc.addPage();
-    doc.setFontSize(18);
-    doc.setTextColor(20, 184, 166);
-    doc.text('Your Score Interpretation', 105, 30, { align: 'center' });
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${formData.businessName.replace(/\s+/g, '-').toLowerCase()}-scorecard.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 
-    yPos = 50;
-    doc.setFontSize(11);
-    doc.setTextColor(0, 0, 0);
-    doc.setFont(undefined, 'bold');
-    doc.text('Total Possible Score:', 20, yPos);
-    doc.setFont(undefined, 'normal');
-    doc.text(`${totalMaxScore}`, 70, yPos);
-
-    yPos += 15;
-    doc.setFontSize(10);
-    doc.setTextColor(60, 60, 60);
-
-    const excellent = Math.ceil(totalMaxScore * 0.8);
-    const good = Math.ceil(totalMaxScore * 0.6);
-    const developing = Math.ceil(totalMaxScore * 0.4);
-
-    // Scoring Bands
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(34, 197, 94); // Green
-    doc.text(`${excellent}-${totalMaxScore}: Excellent`, 20, yPos);
-    doc.setFont(undefined, 'normal');
-    doc.setTextColor(60, 60, 60);
-    doc.text('You\'re performing at a high level. Focus on optimization and scaling.', 25, yPos + 6);
-    
-    yPos += 20;
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(59, 130, 246); // Blue
-    doc.text(`${good}-${excellent - 1}: Good`, 20, yPos);
-    doc.setFont(undefined, 'normal');
-    doc.setTextColor(60, 60, 60);
-    doc.text('Solid foundation. Identify weak areas for targeted improvement.', 25, yPos + 6);
-    
-    yPos += 20;
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(251, 146, 60); // Orange
-    doc.text(`${developing}-${good - 1}: Developing`, 20, yPos);
-    doc.setFont(undefined, 'normal');
-    doc.setTextColor(60, 60, 60);
-    doc.text('Room for growth. Focus on foundational improvements first.', 25, yPos + 6);
-    
-    yPos += 20;
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(239, 68, 68); // Red
-    doc.text(`Below ${developing}: Needs Attention`, 20, yPos);
-    doc.setFont(undefined, 'normal');
-    doc.setTextColor(60, 60, 60);
-    doc.text('Significant opportunity for improvement. Let\'s work together.', 25, yPos + 6);
-
-    // Next Steps
-    yPos += 30;
-    doc.setFontSize(14);
-    doc.setTextColor(20, 184, 166);
-    doc.setFont(undefined, 'bold');
-    doc.text('Recommended Next Steps:', 20, yPos);
-    
-    yPos += 10;
-    doc.setFontSize(10);
-    doc.setTextColor(60, 60, 60);
-    doc.setFont(undefined, 'normal');
-    doc.text('1. Calculate your total score across all categories', 25, yPos);
-    yPos += 7;
-    doc.text('2. Identify your lowest-scoring categories', 25, yPos);
-    yPos += 7;
-    doc.text('3. Focus on improving 1-2 categories at a time', 25, yPos);
-    yPos += 7;
-    doc.text('4. Re-assess quarterly to track progress', 25, yPos);
-    yPos += 7;
-    doc.text('5. Consider expert guidance for accelerated results', 25, yPos);
-
-    // CTA
-    yPos += 25;
-    doc.setFontSize(12);
-    doc.setTextColor(20, 184, 166);
-    doc.setFont(undefined, 'bold');
-    doc.text('Want a Personalized Action Plan?', 105, yPos, { align: 'center' });
-    
-    yPos += 8;
-    doc.setFontSize(10);
-    doc.setTextColor(60, 60, 60);
-    doc.setFont(undefined, 'normal');
-    doc.text('Contact us for a detailed scorecard review and customized improvement strategy.', 105, yPos, { align: 'center' });
-
-    // Footer
-    doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
-    doc.text('Generated by BuildLead - Based on Daniel Priestley\'s Scorecard Methodology', 105, 280, { align: 'center' });
-
-    doc.save(`${formData.businessName.replace(/\s+/g, '-').toLowerCase()}-scorecard.pdf`);
-    
-    alert('Scorecard PDF Generated! Check your downloads folder.');
+    alert('Interactive Scorecard HTML Generated! Upload this file to your website.');
     setStep('select');
   };
 
@@ -375,8 +598,8 @@ No additional text or formatting.`;
   return (
     <div className="max-w-4xl mx-auto">
       <div className="bg-white rounded-xl shadow-lg p-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Business Scorecard Builder</h2>
-        <p className="text-gray-600 mb-8">Based on Daniel Priestley's Key Person of Influence methodology</p>
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">Interactive Scorecard Builder</h2>
+        <p className="text-gray-600 mb-8">Create business assessment scorecards based on Daniel Priestley's KPI methodology</p>
 
         <div className="space-y-6">
           {/* Business Name */}
@@ -512,10 +735,10 @@ No additional text or formatting.`;
                   {/* Metrics */}
                   <div className="bg-white rounded-lg p-4">
                     <div className="flex justify-between items-center mb-3">
-                      <h5 className="font-semibold text-gray-900 text-sm">Metrics</h5>
+                      <h5 className="font-semibold text-gray-900 text-sm">Metrics (Rate 0-10)</h5>
                       <button
                         onClick={() => addMetric(catIndex)}
-                        disabled={cat.metrics.length >= 5}
+                        disabled={cat.metrics.length >= 10}
                         className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                       >
                         + Add Metric
@@ -527,12 +750,11 @@ No additional text or formatting.`;
                         <input
                           type="text"
                           value={metric.metric}
-                          onChange={(e) => handleMetricChange(catIndex, metIndex, 'metric', e.target.value)}
+                          onChange={(e) => handleMetricChange(catIndex, metIndex, e.target.value)}
                           className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
-                          placeholder="e.g., Social media presence"
+                          placeholder="e.g., Quality of social media presence"
                           required
                         />
-                        <span className="text-sm text-gray-600">/10</span>
                         {cat.metrics.length > 1 && (
                           <button
                             onClick={() => removeMetric(catIndex, metIndex)}
@@ -554,7 +776,7 @@ No additional text or formatting.`;
             onClick={handleGenerate}
             className="w-full bg-gradient-to-r from-teal-600 to-blue-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:from-teal-700 hover:to-blue-700 transition-all transform hover:scale-105 shadow-lg"
           >
-            Generate Scorecard PDF
+            Generate Interactive Scorecard HTML
           </button>
         </div>
       </div>
