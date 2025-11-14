@@ -25,7 +25,7 @@ const MagnetBuilder = ({ decrementUses, usesRemaining, isPaid, userEmail, saveEm
       id: 'value-calculator',
       name: 'Value Calculator',
       icon: '🧮',
-      description: "Hormozi's Value Equation - Calculate ROI for prospects",
+      description: "Interactive sliders with real-time ROI calculation. Hormozi's Value Equation.",
       component: ValueCalculator
     },
     {
@@ -154,11 +154,11 @@ const MagnetBuilder = ({ decrementUses, usesRemaining, isPaid, userEmail, saveEm
                   <div className="flex items-start justify-between mb-4">
                     <div className="text-5xl">{type.icon}</div>
                     <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
-                      type.id === 'quiz' || type.id === 'scorecard' 
+                      type.id === 'quiz' || type.id === 'scorecard' || type.id === 'value-calculator'
                         ? 'bg-purple-100 text-purple-700' 
                         : 'bg-blue-100 text-blue-700'
                     }`}>
-                      {type.id === 'quiz' || type.id === 'scorecard' ? 'Interactive' : 'PDF'}
+                      {type.id === 'quiz' || type.id === 'scorecard' || type.id === 'value-calculator' ? 'Interactive' : 'PDF'}
                     </span>
                   </div>
                   <h3 className="text-xl font-bold text-gray-900 mb-2">
