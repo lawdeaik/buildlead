@@ -11,8 +11,5 @@
       "src": "/(.*)",
       "dest": "/server.js"
     }
-  ],
-  "env": {
-    "WHOP_API_KEY": "@whop_api_key"
-  }
+  ]
 }
